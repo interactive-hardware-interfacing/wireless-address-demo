@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Who's Listening?</title>
+<meta name="description" content="Send a message to one of three XIAO ESP32-C3 nodes by address and watch only that one light up — wireless addressing, live over Web Serial.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Who's Listening?</h1>
+  <p class="tag">Three identical nodes, one message. Pick who it’s for and watch only that node light up.</p>
+  <nav>
+    <a href="#firmware">Firmware</a>
+    <a href="#about">About</a>
+    <a href="https://github.com/interactive-hardware-interfacing/wireless-address-demo">Source</a>
+    <a href="https://interactive-hardware-interfacing.github.io/">All tools</a>
+  </nav>
+</header>
+
+<div class="bar">
+  <button id="connect" class="primary">Connect bridge</button>
+  <button id="sim">Try without hardware</button>
+  <button id="disconnect">Disconnect</button>
+  <span id="status">Not connected</span>
+</div>
+
+<div class="note" id="nowebserial" hidden>
+  This browser can’t open USB serial ports. Use <strong>Chrome</strong> or <strong>Edge</strong> on a laptop or desktop. <strong>Try without hardware</strong> works anywhere.
+</div>
+
+<div class="panel">
+  <h2>Send a message to <span id="targetlabel">everyone</span></h2>
+  <div class="sendrow">
+    <button class="target" data-target="1">Node 1</button>
+    <button class="target" data-target="2">Node 2</button>
+    <button class="target" data-target="3">Node 3</button>
+    <button class="target sel" data-target="ALL">All</button>
+  </div>
+  <div class="sendrow">
+    <input type="text" id="msg" placeholder="Type a message and press Send" value="hello node">
+    <button id="send" class="primary">Send</button>
+  </div>
+  <div id="ackline"></div>
+
+  <div class="nodes">
+    <div class="node" id="node1"><div class="bulb"></div><div class="name">Node 1</div><div class="mac">id 1</div></div>
+    <div class="node" id="node2"><div class="bulb"></div><div class="name">Node 2</div><div class="mac">id 2</div></div>
+    <div class="node" id="node3"><div class="bulb"></div><div class="name">Node 3</div><div class="mac">id 3</div></div>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:16px">
+  <h2>Serial log</h2>
+  <div id="log"></div>
+  <div class="logbar">
+    <input id="logcmd" placeholder="(this demo sends via the buttons above)" disabled>
+    <button id="logsend" disabled>Send</button>
+  </div>
+</div>
+
+<!-- ================= ABOUT ================= -->
+<section class="doc" id="about">
+  <h2>About this demo</h2>
+
+  <h3>What it shows</h3>
+  <p>
+    Every device on a network has an address, and messages carry the address of who they’re for. Here, three
+    identical boards each have an address; you pick a recipient and send a message, and <strong>only the
+    addressed board lights up</strong>. Switch to <strong>All</strong> and it’s a broadcast — everyone hears it
+    at once. It’s the idea behind the “to:” line on an email and the MAC address on everything on Wi-Fi.
+  </p>
+  <p><strong>Try this during the tour:</strong> send to Node 2 — only Node 2 blinks. Send to All — all three blink.
+    Ask the group why Node 1 ignored the message meant for Node 2 (it checked the address and it wasn’t his).</p>
+
+  <h3>Hardware</h3>
+  <table>
+    <tr><th>Role</th><th>Board</th><th>Extras</th><th>Power</th></tr>
+    <tr><td>Bridge</td><td>XIAO ESP32-C3</td><td>u.FL antenna</td><td>Laptop USB-C</td></tr>
+    <tr><td>Node 1 / 2 / 3</td><td>XIAO ESP32-C3 (×3)</td><td>LED on D10, u.FL antenna</td><td>USB banks</td></tr>
+  </table>
+  <p class="tag">All four boards are identical hardware. The three nodes differ only by a one-line <code>MY_ID</code> setting
+    (1, 2, 3) in their <code>code.py</code>. Put them in labelled jars or on a board so “Node 1/2/3” is obvious.</p>
+
+  <h3>Wiring</h3>
+  <div class="wiringfig">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 280" font-family="system-ui, sans-serif" font-size="12">
+      <style>
+        .board { fill: var(--panel); stroke: var(--muted); stroke-width: 1.5; }
+        .lbl { fill: var(--ink); } .mut { fill: var(--muted); }
+        .wire { fill: none; stroke: var(--accent); stroke-width: 2; }
+        .ant { fill: none; stroke: var(--ok); stroke-width: 2; }
+        .rf { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 4; }
+        .pad { fill: var(--grid); stroke: var(--muted); stroke-width: 1; }
+      </style>
+      <rect x="20" y="20" width="80" height="50" rx="6" class="board"/>
+      <text x="60" y="48" text-anchor="middle" class="lbl">Laptop</text>
+      <path d="M100 45 H 140" class="wire"/>
+      <rect x="140" y="18" width="110" height="55" rx="6" class="board"/>
+      <text x="195" y="40" text-anchor="middle" class="lbl" font-weight="600">XIAO C3</text>
+      <text x="195" y="56" text-anchor="middle" class="mut" font-size="10">BRIDGE</text>
+      <circle cx="195" cy="18" r="4" class="pad"/><path d="M195 18 V 6 h 20" class="ant"/>
+      <!-- three nodes -->
+      <g>
+        <rect x="430" y="20" width="150" height="50" rx="6" class="board"/>
+        <text x="470" y="42" text-anchor="middle" class="lbl" font-weight="600" font-size="11">Node 1</text>
+        <text x="470" y="56" text-anchor="middle" class="mut" font-size="9">MY_ID=1</text>
+        <circle cx="545" cy="45" r="7" class="pad"/><text x="560" y="49" class="mut" font-size="9">LED</text>
+        <circle cx="430" cy="20" r="4" class="pad"/><path d="M430 20 V 8 h 18" class="ant"/>
+      </g>
+      <g>
+        <rect x="430" y="110" width="150" height="50" rx="6" class="board"/>
+        <text x="470" y="132" text-anchor="middle" class="lbl" font-weight="600" font-size="11">Node 2</text>
+        <text x="470" y="146" text-anchor="middle" class="mut" font-size="9">MY_ID=2</text>
+        <circle cx="545" cy="135" r="7" class="pad"/><text x="560" y="139" class="mut" font-size="9">LED</text>
+        <circle cx="430" cy="110" r="4" class="pad"/><path d="M430 110 V 98 h 18" class="ant"/>
+      </g>
+      <g>
+        <rect x="430" y="200" width="150" height="50" rx="6" class="board"/>
+        <text x="470" y="222" text-anchor="middle" class="lbl" font-weight="600" font-size="11">Node 3</text>
+        <text x="470" y="236" text-anchor="middle" class="mut" font-size="9">MY_ID=3</text>
+        <circle cx="545" cy="225" r="7" class="pad"/><text x="560" y="229" class="mut" font-size="9">LED</text>
+        <circle cx="430" cy="200" r="4" class="pad"/><path d="M430 200 V 188 h 18" class="ant"/>
+      </g>
+      <path d="M250 45 C 340 45, 340 45, 430 45" class="rf"/>
+      <path d="M250 50 C 340 120, 340 120, 430 135" class="rf"/>
+      <path d="M250 55 C 340 210, 340 210, 430 225" class="rf"/>
+      <text x="330" y="150" text-anchor="middle" class="mut" font-size="10">ESP-NOW to all three;</text>
+      <text x="330" y="165" text-anchor="middle" class="mut" font-size="10">each node checks the address</text>
+      <text x="20" y="110" class="mut" font-size="10">LED: D10 → resistor → LED → GND (or use the onboard LED).</text>
+      <text x="20" y="126" class="mut" font-size="10">Each node on its own USB power. Put them where the group can see all three.</text>
+    </svg>
+  </div>
+  <table>
+    <tr><th>Signal</th><th>Pin</th><th>Note</th></tr>
+    <tr><td>Bridge USB</td><td>USB-C</td><td>To the laptop — the only required connection on the bridge</td></tr>
+    <tr><td>Node LED</td><td>D10 → 220 Ω → LED → GND</td><td>Or use the onboard LED (firmware falls back to it)</td></tr>
+    <tr><td>Antenna (all)</td><td>u.FL</td><td>Clip on firmly</td></tr>
+    <tr><td>Node power</td><td>USB-C</td><td>A USB bank each</td></tr>
+  </table>
+
+  <h3>How it works</h3>
+  <p>
+    You pick a recipient; the page sends <code>SEND &lt;1|2|3|ALL&gt; &lt;text&gt;</code> to the bridge → the bridge radios
+    a packet carrying a <strong>target address</strong> → every node hears it, but only the one whose id matches
+    (or everyone, on broadcast) reacts. For a single node, the bridge can use real ESP-NOW <strong>unicast</strong> and
+    report the radio-level <strong>ACK</strong>; a broadcast has no ACK by design. By default nodes filter on a
+    1-byte id so it works without a MAC census; flip <code>USE_MAC</code> on to use real per-node MAC unicast
+    (each node prints its MAC on boot). See
+    <a href="https://github.com/interactive-hardware-interfacing/wireless-address-demo/blob/main/PROTOCOL.md">PROTOCOL.md</a>.
+  </p>
+  <p><strong>The “sniff” aside:</strong> notice every node physically <em>receives</em> every packet — it just chooses to
+    ignore ones not addressed to it. That’s why addressing is politeness, not privacy, and why encryption exists.</p>
+  <p><strong>Known quirks:</strong></p>
+  <ul>
+    <li>Broadcast (All) gets no ACK — that’s correct, not a failure. Only unicast is acknowledged.</li>
+    <li>If a node is off or out of range, a unicast to it shows “no ACK.” Good teaching moment.</li>
+    <li>All boards pin channel 6. Loose antenna → nothing heard; check the u.FL.</li>
+    <li>Set <code>MY_ID</code> to 1/2/3 before flashing each node — easy to forget and flash two the same.</li>
+    <li>Flashing stuck? Hold <strong>BOOT</strong>, tap <strong>RESET</strong>, release <strong>BOOT</strong>.</li>
+  </ul>
+</section>
+
+<!-- ================= FIRMWARE ================= -->
+<section class="doc" id="firmware">
+  <h2>Put the firmware on the boards</h2>
+  <p>Four boards: one bridge, three nodes. All run <strong>CircuitPython</strong>.</p>
+  <ol class="steps">
+    <li><strong>Install CircuitPython</strong> on each XIAO ESP32-C3 if needed (<a href="https://circuitpython.org/board/seeed_xiao_esp32c3/">board page</a>).</li>
+    <li><strong>Bridge:</strong> copy <code>firmware/bridge/code.py</code>. Plug this one into the laptop.</li>
+    <li><strong>Nodes:</strong> copy <code>firmware/node/code.py</code> to each, and set <code>MY_ID</code> to <strong>1</strong>, <strong>2</strong>, <strong>3</strong> — one per board. Wire an LED on D10 (or rely on the onboard LED).</li>
+    <li><strong>(Optional) real MAC unicast:</strong> each node prints its MAC on boot; copy those into the bridge’s <code>NODE_MACS</code> and set <code>USE_MAC = True</code>.</li>
+    <li><strong>Connect.</strong> Click <strong>Connect bridge</strong>, pick the <em>USB JTAG/serial</em> port, then send away.</li>
+  </ol>
+</section>
+
+<footer>
+  Who's Listening? v0.1.0 · Last updated 2026-11-04 · Part of
+  <a href="https://interactive-hardware-interfacing.github.io/">Interactive Hardware Interfacing</a>.
+  Works in Chrome and Edge via Web Serial.
+  <a href="https://github.com/interactive-hardware-interfacing/wireless-address-demo/blob/main/LICENSE">GPL-2.0</a>.
+  Maintained by <a href="https://github.com/LC-Linkous">LC Linkous</a>.
+</footer>
+
+</div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
