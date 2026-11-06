@@ -1,17 +1,19 @@
 # code.py — RX NODE for wireless-address-demo
 #
-# Runs on a XIAO ESP32-C3. One of three identical nodes; set MY_ID to 1, 2 or
-# 3 before flashing each one. The node listens for ESP-NOW packets and blinks
-# its LED when a packet is addressed to IT (target_id == MY_ID) or to everyone
-# (target_id == 0, broadcast). Packets for other nodes are ignored — that's the
-# whole point: addressing.
+# Runs on a XIAO ESP32-C3. One of three identical nodes, told apart only by
+# MY_ID (1, 2 or 3). The page's Firmware tab sets that line for you when you
+# click "Install node 1/2/3"; by hand, edit it before copying the file over.
+# The node listens for ESP-NOW packets and blinks its LED when a packet is
+# addressed to IT (target_id == MY_ID) or to everyone (target_id == 0,
+# broadcast). Packets for other nodes are ignored — that's the whole point:
+# addressing.
 #
 # On boot it PRINTS ITS OWN MAC ADDRESS. If you want the bridge to use real
 # unicast (so only the addressed node even hears the packet), copy each node's
 # printed MAC into the bridge's NODE_MACS and set USE_MAC = True there.
 #
-# An LED on D10 blinks on a hit. If you have a small OLED, you can show the
-# text instead — left as an exercise; the LED is the reliable tour version.
+# The onboard LED blinks on a hit, and so does an optional bigger LED on D10
+# (D10 -> 220 ohm -> LED -> GND) if you want something the back row can see.
 
 import time
 import struct
@@ -20,7 +22,7 @@ import digitalio
 import wifi
 import espnow
 
-MY_ID = 1                 # <-- set 1, 2 or 3 per node before flashing
+MY_ID = 1                 # <-- 1, 2 or 3; the Firmware tab sets this for you
 CHANNEL = 6
 MAGIC = 0xA5
 BROADCAST = b"\xff\xff\xff\xff\xff\xff"
@@ -39,13 +41,21 @@ try:
 except Exception as ex:
     print("could not read MAC:", ex)
 
-# LED
-try:
-    led = digitalio.DigitalInOut(board.D10)
-    led.direction = digitalio.Direction.OUTPUT
-except Exception:
-    led = digitalio.DigitalInOut(board.LED)
-    led.direction = digitalio.Direction.OUTPUT
+# LEDs: the onboard one always, plus D10 for an external one. (Opening D10
+# always succeeds whether or not an LED is wired, so this can't be a fallback;
+# drive both.)
+leds = []
+for pin in (board.LED, board.D10):
+    try:
+        io = digitalio.DigitalInOut(pin)
+        io.direction = digitalio.Direction.OUTPUT
+        leds.append(io)
+    except Exception:
+        pass
+
+def set_leds(on):
+    for io in leds:
+        io.value = on
 
 e = espnow.ESPNow()
 bcast = espnow.Peer(mac=BROADCAST, channel=CHANNEL)
@@ -53,9 +63,9 @@ e.peers.append(bcast)
 
 def blink(times=3):
     for _ in range(times):
-        led.value = True
+        set_leds(True)
         time.sleep(0.07)
-        led.value = False
+        set_leds(False)
         time.sleep(0.07)
 
 print("node", MY_ID, "listening on channel", CHANNEL)

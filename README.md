@@ -23,12 +23,41 @@ Self-contained — copies nothing from the other demos at runtime.
 Four XIAO ESP32-C3 boards, all identical:
 
 - **Bridge** — plugged into the laptop; runs [`firmware/bridge/code.py`](firmware/bridge/code.py).
-- **Node 1/2/3** — each with an LED on D10 (or the onboard LED), on USB power;
-  run [`firmware/node/code.py`](firmware/node/code.py) with `MY_ID` = 1, 2, 3.
+- **Node 1/2/3** — nothing wired (the onboard LED blinks; an optional bigger
+  LED goes on D10), on USB power; run [`firmware/node/code.py`](firmware/node/code.py)
+  with `MY_ID` = 1, 2, 3 — the page sets that for you.
 
 Addressing works out of the box via a node-id filter; flip `USE_MAC` on for
 real per-MAC unicast. Wiring in [`wiring/`](wiring/), protocol in
 [`PROTOCOL.md`](PROTOCOL.md) (this one adds a page→bridge command direction).
+
+## Putting the firmware on the boards
+
+The page does it. Open the **Firmware** tab, plug in a XIAO ESP32-C3, click
+**Install bridge** or **Install node 1 / 2 / 3**, pick the port. The page
+writes `code.py` through CircuitPython's raw REPL over Web Serial (the C3 has
+no `CIRCUITPY` drive, so this is the only USB path), with `MY_ID` already set
+for a node, verifies size and CRC32 on the board, reboots it, and waits for
+the bridge's hello or the node's "listening" line. A board is whichever role
+it was last given.
+
+A board that has never run CircuitPython needs it installed once: download
+the `.bin` for the XIAO ESP32-C3 from
+[circuitpython.org](https://circuitpython.org/board/seeed_xiao_esp32c3/),
+pick it on the Firmware tab, click **Flash CircuitPython**. That path uses
+[esptool-js](https://github.com/espressif/esptool-js), kept in
+[`flasher/`](flasher/) under its own licence.
+
+## What's in the repo
+
+| Path | What it is |
+|---|---|
+| `index.html`, `css/`, `js/app.js` | The page: instrument, plus Hardware / Firmware / About views (`js/views.js`). |
+| `js/bridge.js`, `js/sim.js` | Web Serial reader/writer for the bridge's line-JSON, and a simulator that answers like three nodes. |
+| `js/install.js`, `js/device/` | The Firmware tab: CircuitPython raw REPL over Web Serial (write, verify, reboot). |
+| `flasher/` | CircuitPython flashing for a bare board (esptool-js). Apache-2.0, see `LICENSES.md`. |
+| `firmware/bridge/code.py`, `firmware/node/code.py` | One CircuitPython file per role; the node file serves all three nodes. |
+| `PROTOCOL.md`, `wiring/` | The serial contract (both directions) and the hookup. |
 
 ## Run locally
 
@@ -44,4 +73,6 @@ Chrome or Edge on a laptop/desktop. The simulator works anywhere.
 
 ## License
 
-GPL-2.0 (see [`LICENSE`](LICENSE)). Maintained by [LC Linkous](https://github.com/LC-Linkous).
+GPL-2.0 (see [`LICENSE`](LICENSE)), except `flasher/`, which is Apache-2.0
+because it bundles esptool-js — see [`LICENSES.md`](LICENSES.md).
+Maintained by [LC Linkous](https://github.com/LC-Linkous).

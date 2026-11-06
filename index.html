@@ -5,21 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Who's Listening?</title>
 <meta name="description" content="Send a message to one of three XIAO ESP32-C3 nodes by address and watch only that one light up — wireless addressing, live over Web Serial.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div class="wrap">
 
 <header>
+  <p class="eyebrow"><a href="https://interactive-hardware-interfacing.github.io/#wireless">Wireless communication</a> · demo</p>
   <h1>Who's Listening?</h1>
   <p class="tag">Three identical nodes, one message. Pick who it’s for and watch only that node light up.</p>
-  <nav>
-    <a href="#firmware">Firmware</a>
-    <a href="#about">About</a>
+  <nav aria-label="Page">
+    <a href="#" data-view="" aria-current="page">Instrument</a>
+    <a href="#hardware" data-view="hardware" aria-current="false">Hardware</a>
+    <a href="#firmware" data-view="firmware" aria-current="false">Firmware</a>
+    <a href="#about" data-view="about" aria-current="false">About</a>
+    <span class="navsep" aria-hidden="true"></span>
     <a href="https://github.com/interactive-hardware-interfacing/wireless-address-demo">Source</a>
     <a href="https://interactive-hardware-interfacing.github.io/">All tools</a>
   </nav>
 </header>
+
+<!-- ================= INSTRUMENT ================= -->
+<div id="instrument">
 
 <div class="bar">
   <button id="connect" class="primary">Connect bridge</button>
@@ -53,41 +63,37 @@
   </div>
 </div>
 
-<div class="panel" style="margin-top:16px">
-  <h2>Serial log</h2>
+<div class="termpanel">
+  <div class="termbar"><span class="dots"><i></i><i></i><i></i></span><span>serial log · 115200 8N1 · page → bridge: SEND &lt;1|2|3|ALL&gt; &lt;text&gt;</span></div>
   <div id="log"></div>
   <div class="logbar">
-    <input id="logcmd" placeholder="(this demo sends via the buttons above)" disabled>
-    <button id="logsend" disabled>Send</button>
+    <input id="logcmd" placeholder="SEND 2 hello  — or use the buttons above" autocomplete="off" spellcheck="false">
+    <button id="logsend" class="small">Send</button>
   </div>
 </div>
 
-<!-- ================= ABOUT ================= -->
-<section class="doc" id="about">
-  <h2>About this demo</h2>
+</div><!-- /instrument -->
 
-  <h3>What it shows</h3>
-  <p>
-    Every device on a network has an address, and messages carry the address of who they’re for. Here, three
-    identical boards each have an address; you pick a recipient and send a message, and <strong>only the
-    addressed board lights up</strong>. Switch to <strong>All</strong> and it’s a broadcast — everyone hears it
-    at once. It’s the idea behind the “to:” line on an email and the MAC address on everything on Wi-Fi.
-  </p>
-  <p><strong>Try this during the tour:</strong> send to Node 2 — only Node 2 blinks. Send to All — all three blink.
-    Ask the group why Node 1 ignored the message meant for Node 2 (it checked the address and it wasn’t his).</p>
+<!-- ================= HARDWARE ================= -->
+<section class="view" id="hardware" aria-label="Hardware" hidden>
+  <div class="viewhead">
+    <h2>Hardware</h2>
+    <p class="lede">Four identical boards, no wires between them, one LED each.</p>
+    <button type="button" class="small" data-back>Back to instrument</button>
+  </div>
 
-  <h3>Hardware</h3>
+  <h3>The four boards</h3>
   <table>
-    <tr><th>Role</th><th>Board</th><th>Extras</th><th>Power</th></tr>
-    <tr><td>Bridge</td><td>XIAO ESP32-C3</td><td>u.FL antenna</td><td>Laptop USB-C</td></tr>
-    <tr><td>Node 1 / 2 / 3</td><td>XIAO ESP32-C3 (×3)</td><td>LED on D10, u.FL antenna</td><td>USB banks</td></tr>
+    <tr><th>Role</th><th>Board</th><th>Wired to it</th><th>Power</th></tr>
+    <tr><td>Bridge</td><td>XIAO ESP32-C3</td><td>Nothing. Antenna on, USB to the laptop.</td><td>Laptop USB-C</td></tr>
+    <tr><td>Node 1 / 2 / 3</td><td>XIAO ESP32-C3 (×3)</td><td>Nothing required — the onboard LED blinks. Optionally a bigger LED on D10 for the back row.</td><td>A USB bank each</td></tr>
   </table>
-  <p class="tag">All four boards are identical hardware. The three nodes differ only by a one-line <code>MY_ID</code> setting
-    (1, 2, 3) in their <code>code.py</code>. Put them in labelled jars or on a board so “Node 1/2/3” is obvious.</p>
+  <p class="tag">The three nodes run the same file and differ only by one number, <code>MY_ID</code>. The Firmware tab sets it for you
+    (<em>Install node 1 / 2 / 3</em>), so a board is whichever node it was last installed as. Label them.</p>
 
   <h3>Wiring</h3>
   <div class="wiringfig">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 280" font-family="system-ui, sans-serif" font-size="12">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 280" font-family="system-ui, sans-serif" font-size="12" role="img" aria-label="A laptop connects by USB to a XIAO C3 bridge. The bridge radios over ESP-NOW to three XIAO C3 nodes, each on its own USB power with an LED; every node hears every packet and only the addressed one lights up.">
       <style>
         .board { fill: var(--panel); stroke: var(--muted); stroke-width: 1.5; }
         .lbl { fill: var(--ink); } .mut { fill: var(--muted); }
@@ -103,7 +109,6 @@
       <text x="195" y="40" text-anchor="middle" class="lbl" font-weight="600">XIAO C3</text>
       <text x="195" y="56" text-anchor="middle" class="mut" font-size="10">BRIDGE</text>
       <circle cx="195" cy="18" r="4" class="pad"/><path d="M195 18 V 6 h 20" class="ant"/>
-      <!-- three nodes -->
       <g>
         <rect x="430" y="20" width="150" height="50" rx="6" class="board"/>
         <text x="470" y="42" text-anchor="middle" class="lbl" font-weight="600" font-size="11">Node 1</text>
@@ -130,17 +135,105 @@
       <path d="M250 55 C 340 210, 340 210, 430 225" class="rf"/>
       <text x="330" y="150" text-anchor="middle" class="mut" font-size="10">ESP-NOW to all three;</text>
       <text x="330" y="165" text-anchor="middle" class="mut" font-size="10">each node checks the address</text>
-      <text x="20" y="110" class="mut" font-size="10">LED: D10 → resistor → LED → GND (or use the onboard LED).</text>
+      <text x="20" y="110" class="mut" font-size="10">LED: onboard, or D10 → 220 Ω → LED → GND for a bigger one.</text>
       <text x="20" y="126" class="mut" font-size="10">Each node on its own USB power. Put them where the group can see all three.</text>
     </svg>
   </div>
   <table>
     <tr><th>Signal</th><th>Pin</th><th>Note</th></tr>
     <tr><td>Bridge USB</td><td>USB-C</td><td>To the laptop — the only required connection on the bridge</td></tr>
-    <tr><td>Node LED</td><td>D10 → 220 Ω → LED → GND</td><td>Or use the onboard LED (firmware falls back to it)</td></tr>
+    <tr><td>Node LED</td><td>onboard</td><td>Blinks on every node with no wiring at all</td></tr>
+    <tr><td>Node LED, bigger</td><td>D10 → 220 Ω → LED → GND</td><td>Optional. Printed <em>MOSI</em> on the board. The firmware drives both.</td></tr>
     <tr><td>Antenna (all)</td><td>u.FL</td><td>Clip on firmly</td></tr>
     <tr><td>Node power</td><td>USB-C</td><td>A USB bank each</td></tr>
   </table>
+
+  <h3>Parts</h3>
+  <ul>
+    <li>4× Seeed XIAO ESP32-C3 with the u.FL antenna that ships with each.</li>
+    <li>3× USB power banks (or any 5 V USB source) and USB-C cables; one data cable for the bridge.</li>
+    <li>Optional, per node: an LED and a 220 Ω resistor on D10, if the onboard LED is too small for the room.</li>
+    <li>Three labels: 1, 2, 3.</li>
+  </ul>
+
+  <h3>Things that bite</h3>
+  <ul>
+    <li>Two nodes installed as the same number both answer to it. Reinstall one from the Firmware tab; it takes a few seconds.</li>
+    <li>All boards pin Wi-Fi channel 6. A loose u.FL antenna hears nothing.</li>
+    <li>If you add your own wiring, keep anything tied to ground at power-up off D0, D8 (SCK) and D9 (MISO): on the ESP32-C3 they are boot-strapping pins.</li>
+    <li>A board that won’t take firmware: hold <strong>BOOT</strong> (B), tap <strong>RESET</strong> (R), release BOOT, then try again.</li>
+  </ul>
+  <p class="tag">Tables are mirrored in <a href="https://github.com/interactive-hardware-interfacing/wireless-address-demo/blob/main/wiring/wiring.md">wiring/wiring.md</a>.</p>
+</section>
+
+<!-- ================= FIRMWARE ================= -->
+<section class="view" id="firmware" aria-label="Firmware" hidden>
+  <div class="viewhead">
+    <h2>Put the firmware on the boards</h2>
+    <p class="lede">One bridge, three nodes, each a single <code>code.py</code> written straight from this page. Chrome or Edge.</p>
+    <button type="button" class="small" data-back>Back to instrument</button>
+  </div>
+
+  <div class="steps">
+    <div class="step"><b>1. Plug in</b><p>Connect one XIAO ESP32-C3 over USB. If the instrument is connected to a board, this page disconnects it first.</p></div>
+    <div class="step"><b>2. Pick its job</b><p><b>Install bridge</b> for the board that stays at the laptop. <b>Install node 1</b>, <b>2</b> or <b>3</b> for the others — the page sets <code>MY_ID</code> in the file before writing it. Pick the port named <em>USB JTAG/serial debug unit</em>.</p></div>
+    <div class="step"><b>3. Wait for the first line</b><p>The page writes <code>code.py</code> over CircuitPython’s REPL, checks its size and CRC on the board, reboots it, and waits for the bridge’s hello or the node’s “listening” line. Label the board and do the next one.</p></div>
+    <div class="step"><b>4. Connect</b><p>Back on the instrument, click <b>Connect bridge</b> and pick the bridge’s port. Nodes just need power. Or skip all of this: <b>Try without hardware</b>.</p></div>
+  </div>
+
+  <div class="panel fwpanel">
+    <div class="fwrow">
+      <button id="fwInstallBridge" class="primary">Install bridge</button>
+      <button id="fwInstallNode1" class="primary">Install node 1</button>
+      <button id="fwInstallNode2" class="primary">Install node 2</button>
+      <button id="fwInstallNode3" class="primary">Install node 3</button>
+      <span id="fwStatus" class="fwstatus">Ready. Plug a board in and pick its role.</span>
+    </div>
+    <progress id="fwBar" max="1" value="0" hidden></progress>
+    <div class="note" id="fwNoRepl" hidden>
+      <strong>No CircuitPython on that board.</strong> A XIAO ESP32-C3 fresh from the bag runs Seeed’s factory sketch, not CircuitPython. Install CircuitPython once with the button below, then come back to the install buttons.
+    </div>
+    <div class="cpflash">
+      <h3>Bare board? Install CircuitPython first</h3>
+      <ol>
+        <li>Download the <b>.bin</b> (not the .uf2) for the XIAO ESP32-C3 from <a href="https://circuitpython.org/board/seeed_xiao_esp32c3/" target="_blank" rel="noopener">circuitpython.org</a>. The download site doesn’t let a page fetch it directly, so it’s a save-then-pick.</li>
+        <li><button id="cpLoad" class="small">Choose .bin…</button> <input type="file" id="cpFile" accept=".bin" hidden> <span id="cpName" class="tag">nothing chosen</span></li>
+        <li><button id="cpFlash" class="small" disabled>Flash CircuitPython</button> — erases the board and writes the image (about a minute). If the chip doesn’t answer, unplug, hold <b>BOOT</b> while plugging back in, and retry.</li>
+      </ol>
+      <p class="tag">This step uses <a href="https://github.com/espressif/esptool-js">esptool-js</a>, kept in <code>flasher/</code> under its own licence (Apache-2.0).</p>
+    </div>
+    <h3>Log</h3>
+    <div id="fwLog" class="fwlog" aria-live="polite"></div>
+  </div>
+
+  <details>
+    <summary>Doing it by hand instead</summary>
+    <ul>
+      <li><strong>Thonny:</strong> Tools → Options → Interpreter → <em>CircuitPython (generic)</em>, pick the port, open <code>firmware/bridge/code.py</code> or <code>firmware/node/code.py</code> (and set <code>MY_ID</code> to 1, 2 or 3), then File → Save as… → <em>CircuitPython device</em>, name it <code>code.py</code>.</li>
+      <li><strong>Real MAC unicast (optional):</strong> each node prints its MAC on boot (the install log shows it). Put the three into the bridge’s <code>NODE_MACS</code> and set <code>USE_MAC = True</code>; then a unicast reaches only the addressed node’s radio and the ACK is a real radio ACK.</li>
+      <li><strong>CircuitPython from a terminal:</strong> <code>pip install esptool</code>, then <code>esptool.py --chip esp32c3 --port COMn erase_flash</code> and <code>esptool.py --chip esp32c3 --port COMn write_flash 0x0 adafruit-circuitpython-seeed_xiao_esp32c3-en_US-&lt;version&gt;.bin</code>.</li>
+      <li>The REPL exchange the page uses is written out in <a href="https://github.com/interactive-hardware-interfacing/wireless-address-demo/blob/main/PROTOCOL.md">PROTOCOL.md</a>.</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ================= ABOUT ================= -->
+<section class="view" id="about" aria-label="About this demo" hidden>
+  <div class="viewhead">
+    <h2>About this demo</h2>
+    <p class="lede">What it shows, how to run it in front of a room, and how addressing works.</p>
+    <button type="button" class="small" data-back>Back to instrument</button>
+  </div>
+
+  <h3>What it shows</h3>
+  <p>
+    Every device on a network has an address, and messages carry the address of who they’re for. Here, three
+    identical boards each have an address; you pick a recipient and send a message, and <strong>only the
+    addressed board lights up</strong>. Switch to <strong>All</strong> and it’s a broadcast — everyone hears it
+    at once. It’s the idea behind the “to:” line on an email and the MAC address on everything on Wi-Fi.
+  </p>
+  <p><strong>Try this during the tour:</strong> send to Node 2 — only Node 2 blinks. Send to All — all three blink.
+    Ask the group why Node 1 ignored the message meant for Node 2 (it checked the address and it wasn’t his).</p>
 
   <h3>How it works</h3>
   <p>
@@ -149,7 +242,7 @@
     (or everyone, on broadcast) reacts. For a single node, the bridge can use real ESP-NOW <strong>unicast</strong> and
     report the radio-level <strong>ACK</strong>; a broadcast has no ACK by design. By default nodes filter on a
     1-byte id so it works without a MAC census; flip <code>USE_MAC</code> on to use real per-node MAC unicast
-    (each node prints its MAC on boot). See
+    (each node prints its MAC on boot, and the Firmware tab shows it). See
     <a href="https://github.com/interactive-hardware-interfacing/wireless-address-demo/blob/main/PROTOCOL.md">PROTOCOL.md</a>.
   </p>
   <p><strong>The “sniff” aside:</strong> notice every node physically <em>receives</em> every packet — it just chooses to
@@ -157,31 +250,30 @@
   <p><strong>Known quirks:</strong></p>
   <ul>
     <li>Broadcast (All) gets no ACK — that’s correct, not a failure. Only unicast is acknowledged.</li>
-    <li>If a node is off or out of range, a unicast to it shows “no ACK.” Good teaching moment.</li>
-    <li>All boards pin channel 6. Loose antenna → nothing heard; check the u.FL.</li>
-    <li>Set <code>MY_ID</code> to 1/2/3 before flashing each node — easy to forget and flash two the same.</li>
-    <li>Flashing stuck? Hold <strong>BOOT</strong>, tap <strong>RESET</strong>, release <strong>BOOT</strong>.</li>
+    <li>With <code>USE_MAC</code> off (the default) a “unicast” is still sent as a broadcast frame and filtered by id, so the ACK shown is the radio’s broadcast send counter, not a reply from the node. The node’s own echo (“Node 2 got it”) is the real confirmation.</li>
+    <li>If a node is off or out of range, nothing echoes back. Good teaching moment.</li>
+    <li>The page lights a node the instant you click Send, before the echo arrives, so it feels responsive; the log line is the truth.</li>
   </ul>
-</section>
 
-<!-- ================= FIRMWARE ================= -->
-<section class="doc" id="firmware">
-  <h2>Put the firmware on the boards</h2>
-  <p>Four boards: one bridge, three nodes. All run <strong>CircuitPython</strong>.</p>
-  <ol class="steps">
-    <li><strong>Install CircuitPython</strong> on each XIAO ESP32-C3 if needed (<a href="https://circuitpython.org/board/seeed_xiao_esp32c3/">board page</a>).</li>
-    <li><strong>Bridge:</strong> copy <code>firmware/bridge/code.py</code>. Plug this one into the laptop.</li>
-    <li><strong>Nodes:</strong> copy <code>firmware/node/code.py</code> to each, and set <code>MY_ID</code> to <strong>1</strong>, <strong>2</strong>, <strong>3</strong> — one per board. Wire an LED on D10 (or rely on the onboard LED).</li>
-    <li><strong>(Optional) real MAC unicast:</strong> each node prints its MAC on boot; copy those into the bridge’s <code>NODE_MACS</code> and set <code>USE_MAC = True</code>.</li>
-    <li><strong>Connect.</strong> Click <strong>Connect bridge</strong>, pick the <em>USB JTAG/serial</em> port, then send away.</li>
-  </ol>
+  <h3>The pieces</h3>
+  <table>
+    <tr><th>Part</th><th>What it is</th></tr>
+    <tr><td><code>index.html</code>, <code>css/</code>, <code>js/</code></td><td>This page. No build step, no framework; view source and you have it.</td></tr>
+    <tr><td><code>js/bridge.js</code>, <code>js/sim.js</code></td><td>Web Serial reader/writer for the bridge’s line-JSON, and a simulator that answers like three nodes.</td></tr>
+    <tr><td><code>js/device/</code>, <code>flasher/</code></td><td>The Firmware tab: CircuitPython raw REPL, and esptool-js for bare boards.</td></tr>
+    <tr><td><code>firmware/bridge/</code>, <code>firmware/node/</code></td><td>One CircuitPython file per role; the node file is the same for all three.</td></tr>
+    <tr><td><code>PROTOCOL.md</code>, <code>wiring/</code></td><td>The serial contract (both directions) and the hookup.</td></tr>
+  </table>
+  <p class="tag">Part of <a href="https://interactive-hardware-interfacing.github.io/">Interactive Hardware Interfacing</a>.
+    GPL-2.0, except <code>flasher/</code> (Apache-2.0) — see <a href="https://github.com/interactive-hardware-interfacing/wireless-address-demo/blob/main/LICENSES.md">LICENSES.md</a>.</p>
 </section>
 
 <footer>
-  Who's Listening? v0.1.0 · Last updated 2026-11-04 · Part of
+  Who's Listening? v0.2.0 · Last updated 2026-11-06 · Part of
   <a href="https://interactive-hardware-interfacing.github.io/">Interactive Hardware Interfacing</a>.
   Works in Chrome and Edge via Web Serial.
-  <a href="https://github.com/interactive-hardware-interfacing/wireless-address-demo/blob/main/LICENSE">GPL-2.0</a>.
+  <a href="https://github.com/interactive-hardware-interfacing/wireless-address-demo/blob/main/LICENSE">GPL-2.0</a>
+  (<a href="https://github.com/interactive-hardware-interfacing/wireless-address-demo/blob/main/LICENSES.md">LICENSES.md</a>).
   Maintained by <a href="https://github.com/LC-Linkous">LC Linkous</a>.
 </footer>
 

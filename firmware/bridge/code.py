@@ -1,15 +1,18 @@
 # code.py — BRIDGE node for wireless-address-demo
 #
-# Runs on a XIAO ESP32-C3, tethered to the laptop. Unlike the other demos,
-# this bridge also RECEIVES commands from the page and TRANSMITS them over
+# Runs on a XIAO ESP32-C3, tethered to the laptop. Besides reporting to the
+# page, this bridge also RECEIVES commands from the page and TRANSMITS them over
 # ESP-NOW. It can address one node or broadcast to all, and reports whether a
 # unicast was acknowledged at the radio level.
 #
 # Page -> bridge (one command per line, over USB serial):
 #   SEND <target> <text>     target = 1 | 2 | 3 | ALL
-# Bridge -> page (shared line-JSON):
+# Bridge -> page (line-JSON):
 #   {"t":"hello","role":"bridge","proto":1,"channel":6}
 #   {"t":"sent","target":"2","text":"hi","ack":true,"bcast":false,"ms":123}
+#       ack is true/false only for a real MAC unicast (USE_MAC); with the
+#       default id filter the frame goes out as a broadcast and ack is null —
+#       the node's echo-back ("rx") is the confirmation then.
 #   {"t":"rx","from":"aabb...","node":2,"text":"hi","rssi":-40,"ms":124}  (echo-back from nodes, optional)
 #
 # ADDRESSING: each node filters on a 1-byte node_id in the payload, and also
@@ -71,22 +74,26 @@ def build(target_id, text):
     return body + tb
 
 def transmit(target_id, text):
-    """Send to one node (unicast if we have its MAC) or broadcast. Returns ack bool."""
+    """Send to one node (unicast if we have its MAC) or broadcast.
+    Returns (ack, bcast): ack is True/False for a real unicast, None when the
+    frame went out as a broadcast filtered by id (no radio ACK exists)."""
     payload = build(target_id, text)
-    bcast = (target_id == 0) or (USE_MAC and target_id not in peers_by_id)
+    bcast = (target_id == 0)
+    unicast = (not bcast) and (target_id in peers_by_id)
     before = e.send_success
     try:
-        if not bcast and target_id in peers_by_id:
+        if unicast:
             e.send(payload, peers_by_id[target_id])     # true unicast -> gets an ACK
         else:
             e.send(payload, bcast_peer)                  # broadcast -> no ACK
     except Exception as ex:
         emit({"t": "error", "msg": str(ex)})
         return False, bcast
+    if not unicast:
+        return None, bcast
     # Give the radio a moment to update the success counter.
     time.sleep(0.01)
-    ack = (not bcast) and (e.send_success > before)
-    return ack, bcast
+    return (e.send_success > before), bcast
 
 # Read commands from USB. sys.stdin.readline() blocks, so we poll non-blocking
 # via supervisor if available; otherwise fall back to a simple readline loop.

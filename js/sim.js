@@ -26,8 +26,10 @@ export class SimBridge {
     const bcast = tgt === 'ALL';
     const targetId = bcast ? 0 : parseInt(tgt, 10);
     if (!bcast && ![1, 2, 3].includes(targetId)) { this._emit({ t: 'error', msg: 'bad target' }); return; }
-    // sent confirmation (ack only for a specific node)
-    setTimeout(() => this._emit({ t: 'sent', target: tgt, text: msg, ack: !bcast, bcast, ms }), 40);
+    // sent confirmation. The simulated bridge runs in id-filter mode like the
+    // default firmware, so a single-node send has no radio ACK (ack: null);
+    // the node's echo below is the confirmation.
+    setTimeout(() => this._emit({ t: 'sent', target: tgt, text: msg, ack: bcast ? false : null, bcast, ms }), 40);
     // node echo(es): the addressed node, or all three on broadcast
     const nodes = bcast ? [1, 2, 3] : [targetId];
     nodes.forEach((n, i) => setTimeout(() =>

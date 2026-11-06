@@ -38,6 +38,6 @@
   <path d="M250 55 C 340 210, 340 210, 430 225" class="rf"/>
   <text x="330" y="150" text-anchor="middle" class="mut" font-size="10">ESP-NOW to all three;</text>
   <text x="330" y="165" text-anchor="middle" class="mut" font-size="10">each node checks the address</text>
-  <text x="20" y="110" class="mut" font-size="10">LED: D10 to resistor to LED to GND (or onboard LED).</text>
+  <text x="20" y="110" class="mut" font-size="10">LED: onboard, or D10 to 220 ohm to LED to GND for a bigger one.</text>
   <text x="20" y="126" class="mut" font-size="10">Each node on its own USB power.</text>
 </svg>

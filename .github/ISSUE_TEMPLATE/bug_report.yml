@@ -16,7 +16,7 @@ body:
         - Web page (live site)
         - Web page (local copy)
         - Bridge firmware (`firmware/bridge/code.py`)
-        - Node firmware (`firmware/node/code.py`)
+        - Node firmware (`firmware/node/code.py`, same file for nodes 1–3)
         - Wiring
         - Docs / README / PROTOCOL.md
         - Deploy (GitHub Pages)

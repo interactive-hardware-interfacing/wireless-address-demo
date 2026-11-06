@@ -30,7 +30,7 @@ body:
         - Page — serial log / connect flow
         - Protocol (PROTOCOL.md)
         - Bridge firmware (`firmware/bridge/code.py`)
-        - Node firmware (`firmware/node/code.py`)
+        - Node firmware (`firmware/node/code.py`, same file for nodes 1–3)
         - Wiring
         - Docs
         - Other
