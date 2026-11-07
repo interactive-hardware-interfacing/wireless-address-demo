@@ -59,6 +59,24 @@ pick it on the Firmware tab, click **Flash CircuitPython**. That path uses
 | `firmware/bridge/code.py`, `firmware/node/code.py` | One CircuitPython file per role; the node file serves all three nodes. |
 | `PROTOCOL.md`, `wiring/` | The serial contract (both directions) and the hookup. |
 
+## Addressing switch and sniffer view
+
+The **Addressing** switch on the instrument flips the bridge between
+*node-id filter* (every frame is a broadcast; nodes filter on a byte) and
+*MAC unicast* (a single-node send goes to that node's radio address). Each
+node card counts what it **heard** (received, not for me) and what it
+**accepted**. In id mode a send to Node 2 ticks *heard* on 1 and 3; in MAC
+mode they never see the frame. That's the unicast-vs-broadcast lesson in one
+click. The bridge learns the MACs from the nodes' reports, so send to *All*
+once before switching.
+
+## Logging data and presenter mode
+
+The **Data logging** panel records every send (`sends.csv`: target, text,
+mode, ACK), every node report (`rx.csv`: node, accepted 1/0) and labelled
+marks into one `.zip`, kept in memory until Download. **Presenter** (or `P`)
+hides the log and enlarges the node bulbs for a projector; `Esc` leaves it.
+
 ## Run locally
 
 ```

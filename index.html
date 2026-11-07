@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=0.2.0">
 </head>
 <body>
 <div class="wrap">
@@ -36,13 +36,14 @@
   <button id="sim">Try without hardware</button>
   <button id="disconnect">Disconnect</button>
   <span id="status">Not connected</span>
+  <button id="presenter" class="small" aria-pressed="false" title="Big and quiet, for the projector (P / Esc)">Presenter</button>
 </div>
 
-<div class="note" id="nowebserial" hidden>
+<div class="note" id="nowebserial" data-presenter="hide" hidden>
   This browser can’t open USB serial ports. Use <strong>Chrome</strong> or <strong>Edge</strong> on a laptop or desktop. <strong>Try without hardware</strong> works anywhere.
 </div>
 
-<div class="panel">
+<div class="panel" data-presenter="hero">
   <h2>Send a message to <span id="targetlabel">everyone</span></h2>
   <div class="sendrow">
     <button class="target" data-target="1">Node 1</button>
@@ -54,16 +55,35 @@
     <input type="text" id="msg" placeholder="Type a message and press Send" value="hello node">
     <button id="send" class="primary">Send</button>
   </div>
+  <div class="sendrow moderow">
+    <span class="inline">Addressing:</span>
+    <button class="mode sel" data-mode="ID" id="modeId" disabled>node-id filter (broadcast)</button>
+    <button class="mode" data-mode="MAC" id="modeMac" disabled>MAC unicast</button>
+    <span id="modeline" class="inline"></span>
+  </div>
   <div id="ackline"></div>
 
   <div class="nodes">
-    <div class="node" id="node1"><div class="bulb"></div><div class="name">Node 1</div><div class="mac">id 1</div></div>
-    <div class="node" id="node2"><div class="bulb"></div><div class="name">Node 2</div><div class="mac">id 2</div></div>
-    <div class="node" id="node3"><div class="bulb"></div><div class="name">Node 3</div><div class="mac">id 3</div></div>
+    <div class="node" id="node1"><div class="bulb"></div><div class="name">Node 1</div><div class="mac">id 1</div><div class="counts"><span class="heard" title="heard: received a packet addressed to someone else">heard <b>0</b></span><span class="acc" title="accepted: addressed to this node or to everyone">accepted <b>0</b></span></div></div>
+    <div class="node" id="node2"><div class="bulb"></div><div class="name">Node 2</div><div class="mac">id 2</div><div class="counts"><span class="heard">heard <b>0</b></span><span class="acc">accepted <b>0</b></span></div></div>
+    <div class="node" id="node3"><div class="bulb"></div><div class="name">Node 3</div><div class="mac">id 3</div><div class="counts"><span class="heard">heard <b>0</b></span><span class="acc">accepted <b>0</b></span></div></div>
   </div>
+  <p class="lesson" id="lesson">Broadcast reaches everyone — addressing is a filter. Switch to <strong>MAC unicast</strong> and the others never hear it at all.</p>
 </div>
 
-<div class="termpanel">
+<div class="panel logpanel" data-presenter="hide">
+  <h2>Data logging</h2>
+  <div class="logrow">
+    <button id="recStart" class="primary" disabled>● Record</button>
+    <button id="recStop" disabled>■ Stop</button>
+    <button id="recDownload" disabled>Download .zip</button>
+    <span id="recStatus" class="recstatus"></span>
+    <span class="markgroup"><input id="recMarkLabel" placeholder="mark label, e.g. node 2 unplugged"><button id="recMark" class="small" disabled>Mark</button></span>
+  </div>
+  <p class="logfiles"><code>sends.csv</code> every send: target, text, addressing mode, ACK · <code>rx.csv</code> every node report: who heard what, accepted or not · <code>marks.csv</code> labelled events. Kept in memory until you download.</p>
+</div>
+
+<div class="termpanel" data-presenter="hide">
   <div class="termbar"><span class="dots"><i></i><i></i><i></i></span><span>serial log · 115200 8N1 · page → bridge: SEND &lt;1|2|3|ALL&gt; &lt;text&gt;</span></div>
   <div id="log"></div>
   <div class="logbar">
@@ -210,7 +230,7 @@
     <summary>Doing it by hand instead</summary>
     <ul>
       <li><strong>Thonny:</strong> Tools → Options → Interpreter → <em>CircuitPython (generic)</em>, pick the port, open <code>firmware/bridge/code.py</code> or <code>firmware/node/code.py</code> (and set <code>MY_ID</code> to 1, 2 or 3), then File → Save as… → <em>CircuitPython device</em>, name it <code>code.py</code>.</li>
-      <li><strong>Real MAC unicast (optional):</strong> each node prints its MAC on boot (the install log shows it). Put the three into the bridge’s <code>NODE_MACS</code> and set <code>USE_MAC = True</code>; then a unicast reaches only the addressed node’s radio and the ACK is a real radio ACK.</li>
+      <li><strong>Real MAC unicast:</strong> no setup. The bridge learns each node’s MAC from the reports they send back; send to <em>All</em> once, then flip the <strong>Addressing</strong> switch on the instrument to <em>MAC unicast</em>. (Each node also prints its MAC on boot, and the bridge’s <code>NODE_MACS</code> can pre-fill the table if you want.)</li>
       <li><strong>CircuitPython from a terminal:</strong> <code>pip install esptool</code>, then <code>esptool.py --chip esp32c3 --port COMn erase_flash</code> and <code>esptool.py --chip esp32c3 --port COMn write_flash 0x0 adafruit-circuitpython-seeed_xiao_esp32c3-en_US-&lt;version&gt;.bin</code>.</li>
       <li>The REPL exchange the page uses is written out in <a href="https://github.com/interactive-hardware-interfacing/wireless-address-demo/blob/main/PROTOCOL.md">PROTOCOL.md</a>.</li>
     </ul>
@@ -238,19 +258,23 @@
   <h3>How it works</h3>
   <p>
     You pick a recipient; the page sends <code>SEND &lt;1|2|3|ALL&gt; &lt;text&gt;</code> to the bridge → the bridge radios
-    a packet carrying a <strong>target address</strong> → every node hears it, but only the one whose id matches
-    (or everyone, on broadcast) reacts. For a single node, the bridge can use real ESP-NOW <strong>unicast</strong> and
-    report the radio-level <strong>ACK</strong>; a broadcast has no ACK by design. By default nodes filter on a
-    1-byte id so it works without a MAC census; flip <code>USE_MAC</code> on to use real per-node MAC unicast
-    (each node prints its MAC on boot, and the Firmware tab shows it). See
+    a packet carrying a <strong>target address</strong>. The <strong>Addressing</strong> switch is the lesson in one
+    click. In <em>node-id filter</em> mode the frame is a broadcast: every node hears it (the <em>heard</em> counter
+    ticks on all three, and they flash dim), but only the one whose id matches — or everyone, on broadcast — reacts
+    (<em>accepted</em>, bright flash). In <em>MAC unicast</em> mode the bridge sends to that one node’s radio address:
+    the others never receive the frame, their counters stay still, and the radio reports a real <strong>ACK</strong>.
+    A broadcast has no ACK by design. The bridge learns each node’s MAC from the reports they send back, so send to
+    <em>All</em> once before switching. See
     <a href="https://github.com/interactive-hardware-interfacing/wireless-address-demo/blob/main/PROTOCOL.md">PROTOCOL.md</a>.
   </p>
-  <p><strong>The “sniff” aside:</strong> notice every node physically <em>receives</em> every packet — it just chooses to
-    ignore ones not addressed to it. That’s why addressing is politeness, not privacy, and why encryption exists.</p>
+  <p><strong>The “sniff” aside:</strong> in id mode every node physically <em>receives</em> every packet — it just chooses
+    to ignore ones not addressed to it, and the <em>heard</em> counter proves it. That’s why addressing is politeness,
+    not privacy, and why encryption exists. Unicast narrows who receives the frame; it still isn’t secrecy.</p>
   <p><strong>Known quirks:</strong></p>
   <ul>
     <li>Broadcast (All) gets no ACK — that’s correct, not a failure. Only unicast is acknowledged.</li>
-    <li>With <code>USE_MAC</code> off (the default) a “unicast” is still sent as a broadcast frame and filtered by id, so the ACK shown is the radio’s broadcast send counter, not a reply from the node. The node’s own echo (“Node 2 got it”) is the real confirmation.</li>
+    <li>In node-id mode a “unicast” is still a broadcast frame filtered by id, so there is no radio ACK; the node’s own report (“Node 2 got it”) is the confirmation. Switch to MAC unicast for a real ACK.</li>
+    <li>MAC unicast to a node the bridge hasn’t heard from yet gives an error and sends nothing — send to <em>All</em> first.</li>
     <li>If a node is off or out of range, nothing echoes back. Good teaching moment.</li>
     <li>The page lights a node the instant you click Send, before the echo arrives, so it feels responsive; the log line is the truth.</li>
   </ul>
@@ -259,6 +283,7 @@
   <table>
     <tr><th>Part</th><th>What it is</th></tr>
     <tr><td><code>index.html</code>, <code>css/</code>, <code>js/</code></td><td>This page. No build step, no framework; view source and you have it.</td></tr>
+    <tr><td><code>js/logger.js</code>, <code>js/presenter.js</code></td><td>Data logging (CSV zip with marks) and presenter mode.</td></tr>
     <tr><td><code>js/bridge.js</code>, <code>js/sim.js</code></td><td>Web Serial reader/writer for the bridge’s line-JSON, and a simulator that answers like three nodes.</td></tr>
     <tr><td><code>js/device/</code>, <code>flasher/</code></td><td>The Firmware tab: CircuitPython raw REPL, and esptool-js for bare boards.</td></tr>
     <tr><td><code>firmware/bridge/</code>, <code>firmware/node/</code></td><td>One CircuitPython file per role; the node file is the same for all three.</td></tr>
@@ -278,6 +303,6 @@
 </footer>
 
 </div>
-<script type="module" src="js/app.js"></script>
+<script type="module" src="js/app.js?v=0.2.0"></script>
 </body>
 </html>

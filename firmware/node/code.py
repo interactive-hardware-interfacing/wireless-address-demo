@@ -5,12 +5,15 @@
 # click "Install node 1/2/3"; by hand, edit it before copying the file over.
 # The node listens for ESP-NOW packets and blinks its LED when a packet is
 # addressed to IT (target_id == MY_ID) or to everyone (target_id == 0,
-# broadcast). Packets for other nodes are ignored — that's the whole point:
-# addressing.
+# broadcast). Packets for other nodes are NOT acted on — but the node still
+# physically received them, and it tells the bridge so ("heard", msg_type
+# 0x42) so the page can show the difference between hearing and accepting.
+# That's the whole point: addressing is a filter, not privacy.
 #
-# On boot it PRINTS ITS OWN MAC ADDRESS. If you want the bridge to use real
-# unicast (so only the addressed node even hears the packet), copy each node's
-# printed MAC into the bridge's NODE_MACS and set USE_MAC = True there.
+# Every report the node sends back (0x41 accepted / 0x42 heard) carries its
+# id in byte 2 and arrives from its own MAC, so the bridge learns the id→MAC
+# table by itself and can switch to real unicast (MODE MAC) at runtime. In
+# unicast mode the other nodes never hear the packet at all, and send nothing.
 #
 # The onboard LED blinks on a hit, and so does an optional bigger LED on D10
 # (D10 -> 220 ohm -> LED -> GND) if you want something the back row can see.
@@ -26,7 +29,7 @@ MY_ID = 1                 # <-- 1, 2 or 3; the Firmware tab sets this for you
 CHANNEL = 6
 MAGIC = 0xA5
 BROADCAST = b"\xff\xff\xff\xff\xff\xff"
-ECHO_BACK = True          # send a short ack-echo the bridge can show
+ECHO_BACK = True          # report accepted (0x41) and heard-but-rejected (0x42) packets to the bridge
 
 wifi.radio.enabled = True
 try:
@@ -79,14 +82,19 @@ while True:
                 target = msg[4]
                 ln = msg[5]
                 text = bytes(msg[6:6 + ln]).decode("utf-8", "replace")
-                if target == 0 or target == MY_ID:
+                accepted = (target == 0 or target == MY_ID)
+                if accepted:
                     blink(3 if target == MY_ID else 2)   # longer for a direct hit
                     print("hit: target=%d text=%r" % (target, text))
-                    if ECHO_BACK:
-                        reply = struct.pack("<BBBBBB", MAGIC, 0x01, MY_ID, 0x41, 0, 0)
-                        try:
-                            e.send(reply, bcast)
-                        except Exception:
-                            pass
+                else:
+                    print("heard: target=%d (not me)" % target)
+                if ECHO_BACK:
+                    # Report: byte 3 = 0x41 accepted / 0x42 heard-only; byte 4 = the
+                    # target the packet named; byte 5 = text length (text not repeated).
+                    reply = struct.pack("<BBBBBB", MAGIC, 0x01, MY_ID, 0x41 if accepted else 0x42, target, ln)
+                    try:
+                        e.send(reply, bcast)
+                    except Exception:
+                        pass
     else:
         time.sleep(0.003)

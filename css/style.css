@@ -109,7 +109,7 @@ button.primary:hover:not(:disabled) { filter: brightness(1.12); border-color: va
 button.small { padding: 6px 12px; font-size: 14px; }
 input[type=range] { accent-color: var(--accent); }
 input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; }
-input[type=text], input:not([type]), select {
+input[type=text], input[type=number], input:not([type]), select {
   font: inherit; padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
   background: var(--bg-2); color: var(--text);
 }
@@ -176,6 +176,39 @@ footer a { color: var(--muted); } footer a:hover { color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } html { scroll-behavior: auto; } }
 @media (max-width: 600px) { .wrap { padding: 0 16px 48px; } header h1 { font-size: 26px; } nav { gap: 2px 14px; } }
 
+/* presenter mode: body.presenter — big, quiet, for the projector.
+   Mark elements with data-presenter="hide" to drop them and data-presenter="hero"
+   to enlarge them. Everything keeps running; this is CSS only. */
+body.presenter { font-size: 19px; }
+body.presenter .wrap { max-width: none; padding: 0 32px 24px; }
+body.presenter [data-presenter="hide"], body.presenter header .tag, body.presenter header .eyebrow,
+body.presenter nav a:not([data-view=""]), body.presenter nav .navsep, body.presenter footer { display: none !important; }
+body.presenter header { padding-top: 14px; }
+body.presenter header::before { display: none; }
+body.presenter header h1 { font-size: 30px; margin-bottom: 4px; }
+body.presenter nav { margin-bottom: 12px; border-bottom: 0; }
+body.presenter nav a[data-view=""] { pointer-events: none; border-bottom-color: transparent; padding: 4px 0; }
+body.presenter .bar { margin-bottom: 10px; }
+body.presenter .stats .n { font-size: 56px; }
+body.presenter .stats .k { font-size: 14px; }
+body.presenter .panel h2 { font-size: 14px; }
+body.presenter [data-presenter="hero"] canvas { height: min(52vh, 560px) !important; }
+body.presenter button.small { font-size: 16px; }
+#presenter[aria-pressed="true"] { background: var(--yellow); border-color: var(--yellow); color: #1a1500; }
+
+/* data logging panel */
+.logpanel { margin-top: 16px; }
+.logrow { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.logrow .markgroup { display: inline-flex; gap: 6px; margin-left: auto; }
+.logrow .markgroup input { width: 180px; }
+.recstatus { color: var(--muted); font-family: var(--mono); font-size: 13px; flex: 1 1 200px; }
+.recstatus.on { color: var(--magenta); }
+.recstatus.on::before { content: "●"; margin-right: 6px; animation: blink 1s steps(2) infinite; }
+@keyframes blink { to { opacity: .25; } }
+.recstatus.full { color: var(--yellow); }
+#recStart.on { background: var(--magenta); border-color: var(--magenta); color: #1a0710; }
+.logfiles { color: var(--faint); font-size: 13px; margin: 8px 0 0; }
+
 /* ---- Part 2: wireless-address-demo ----------------------------------------- */
 
 /* recipient picker: chips that fill with the accent when selected */
@@ -205,3 +238,27 @@ progress#fwBar { width: 100%; height: 6px; margin-top: 12px; accent-color: var(-
 .cpflash ol { padding-left: 20px; } .cpflash li { margin: 7px 0; }
 .fwlog { font-family: var(--mono); font-size: 12.5px; line-height: 1.6; background: #07090c; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 10px 12px; height: 170px; overflow: auto; white-space: pre-wrap; word-break: break-word; color: #cbd3de; }
 .fwlog .dim { color: var(--faint); } .fwlog .ok { color: var(--green); } .fwlog .warn { color: var(--yellow); } .fwlog .tx { color: var(--magenta); }
+
+/* presenter: the three nodes are the show */
+body.presenter .nodes { margin: 28px 0 12px; }
+body.presenter .node .bulb { width: 150px; height: 150px; border-width: 3px; }
+body.presenter .node .name { font-size: 28px; }
+body.presenter .node .mac { font-size: 16px; }
+body.presenter .sendrow input[type=text], body.presenter .target { font-size: 18px; }
+body.presenter #ackline { font-size: 18px; }
+
+/* addressing switch + sniffer counters */
+.moderow { margin-top: 2px; }
+.mode { font-family: var(--mono); font-weight: 600; font-size: 13px; padding: 6px 12px; }
+.mode.sel { background: var(--yellow); color: #1a1500; border-color: var(--yellow); }
+#modeline { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+.node .counts { display: flex; justify-content: center; gap: 10px; margin-top: 6px; font-family: var(--mono); font-size: 12px; color: var(--faint); }
+.node .counts b { color: var(--text); font-weight: 600; }
+.node .counts .acc b { color: var(--accent); }
+.node .counts .heard b { color: var(--muted); }
+.node.heard .bulb { background: var(--card-hover); border-color: var(--faint); box-shadow: 0 0 10px 1px rgba(154,163,178,.25); }
+.lesson { margin: 8px 0 0; font-size: 14px; color: var(--muted); text-align: center; }
+.lesson strong { color: var(--yellow); }
+body.presenter .node .counts { font-size: 18px; gap: 18px; }
+body.presenter .lesson { font-size: 20px; }
+body.presenter .mode { font-size: 16px; }

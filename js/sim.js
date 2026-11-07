@@ -1,14 +1,15 @@
 'use strict';
 
 /*
- * sim.js — fake bridge for wireless-address-demo. Accepts the same SEND
- * command the real bridge does and replies with a `sent` line (ack true for a
- * specific node, bcast for ALL), plus a short `rx` echo from the targeted
- * node(s), so the page's node diagram lights up offline too.
+ * sim.js — fake bridge for wireless-address-demo. Accepts the same SEND and
+ * MODE commands the real bridge does. In id mode every node "hears" every
+ * packet: the addressed one answers `rx`, the others `heard`. In MAC mode a
+ * single-node send reaches only that node (real ACK, nobody else hears it);
+ * a broadcast still reaches everyone.
  */
 
 export class SimBridge {
-  constructor() { this.onLine = () => {}; this.onRaw = () => {}; this.onClose = () => {}; this.connected = false; }
+  constructor() { this.onLine = () => {}; this.onRaw = () => {}; this.onClose = () => {}; this.connected = false; this.useMac = false; }
 
   async connect() {
     this.connected = true;
@@ -19,6 +20,8 @@ export class SimBridge {
 
   async send(text) {
     const line = text.trim();
+    const mode = /^MODE\s+(ID|MAC)$/i.exec(line);
+    if (mode) { this.useMac = mode[1].toUpperCase() === 'MAC'; setTimeout(() => this._emit({ t: 'mode', use_mac: this.useMac, known: [1, 2, 3] }), 30); return; }
     const m = /^SEND\s+(\S+)\s+(.*)$/i.exec(line);
     if (!m) { this._emit({ t: 'error', msg: 'unknown command' }); return; }
     const tgt = m[1].toUpperCase(), msg = m[2];
@@ -26,15 +29,15 @@ export class SimBridge {
     const bcast = tgt === 'ALL';
     const targetId = bcast ? 0 : parseInt(tgt, 10);
     if (!bcast && ![1, 2, 3].includes(targetId)) { this._emit({ t: 'error', msg: 'bad target' }); return; }
-    // sent confirmation. The simulated bridge runs in id-filter mode like the
-    // default firmware, so a single-node send has no radio ACK (ack: null);
-    // the node's echo below is the confirmation.
-    setTimeout(() => this._emit({ t: 'sent', target: tgt, text: msg, ack: bcast ? false : null, bcast, ms }), 40);
-    // node echo(es): the addressed node, or all three on broadcast
-    const nodes = bcast ? [1, 2, 3] : [targetId];
-    nodes.forEach((n, i) => setTimeout(() =>
-      this._emit({ t: 'rx', from: '7c9ebda1' + ('0' + n).slice(-2) + '00', node: n, text: '', rssi: -38 - n * 3, ms: ms + 2 }),
-      70 + i * 30));
+    const unicast = this.useMac && !bcast;
+    // sent confirmation: a real ACK only for a MAC unicast; null in id mode.
+    setTimeout(() => this._emit({ t: 'sent', target: tgt, text: msg, ack: bcast ? false : unicast ? true : null, bcast, ms }), 40);
+    // node reports: who heard the frame, and whether it was for them
+    const hearers = unicast ? [targetId] : [1, 2, 3];
+    hearers.forEach((n, i) => setTimeout(() => {
+      const accepted = bcast || n === targetId;
+      this._emit({ t: accepted ? 'rx' : 'heard', from: '7c9ebda1' + ('0' + n).slice(-2) + '00', node: n, to: targetId, text: '', rssi: -38 - n * 3, ms: ms + 2 });
+    }, 70 + i * 30));
   }
 
   async disconnect() { this.connected = false; }

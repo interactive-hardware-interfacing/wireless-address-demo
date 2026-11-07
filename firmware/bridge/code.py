@@ -7,18 +7,26 @@
 #
 # Page -> bridge (one command per line, over USB serial):
 #   SEND <target> <text>     target = 1 | 2 | 3 | ALL
+#   MODE ID | MODE MAC       switch addressing at runtime (see below)
 # Bridge -> page (line-JSON):
-#   {"t":"hello","role":"bridge","proto":1,"channel":6}
+#   {"t":"hello","role":"bridge","proto":1,"channel":6,"use_mac":false}
+#   {"t":"mode","use_mac":true,"known":[1,2,3]}   answer to MODE (known = ids with a learned MAC)
 #   {"t":"sent","target":"2","text":"hi","ack":true,"bcast":false,"ms":123}
-#       ack is true/false only for a real MAC unicast (USE_MAC); with the
-#       default id filter the frame goes out as a broadcast and ack is null —
-#       the node's echo-back ("rx") is the confirmation then.
-#   {"t":"rx","from":"aabb...","node":2,"text":"hi","rssi":-40,"ms":124}  (echo-back from nodes, optional)
+#       ack is true/false only for a real MAC unicast; in id mode the frame
+#       goes out as a broadcast and ack is null — the node's "rx" is the
+#       confirmation then.
+#   {"t":"rx","from":"aabb...","node":2,"to":2,"text":"","rssi":-40,"ms":124}     node ACCEPTED a packet
+#   {"t":"heard","from":"aabb...","node":1,"to":2,"rssi":-40,"ms":124}            node heard one for someone else
 #
-# ADDRESSING: each node filters on a 1-byte node_id in the payload, and also
-# listens to a true broadcast (node_id 0 = all). This works on day one without
-# a MAC census. If you want REAL unicast by MAC, fill NODE_MACS below with the
-# addresses each node prints on boot; set USE_MAC = True.
+# ADDRESSING, two modes, switchable from the page:
+#   ID  (default): every frame is a broadcast; each node filters on the 1-byte
+#       target_id in the payload. Every node hears every packet (and says so).
+#   MAC: a single-node SEND goes as a true ESP-NOW unicast to that node's MAC;
+#       only it receives the frame, and the radio reports a real ACK.
+# The bridge learns each node's MAC from the reports nodes send back (byte 2
+# is the node id, the frame's source is its MAC), so MODE MAC needs no editing:
+# send something to ALL first so every node answers once. NODE_MACS below can
+# still pre-fill the table.
 #
 # Payload to nodes (little-endian):
 #   off 0 1B magic 0xA5 | 1 1B version 0x01 | 2 1B from_id 0x00(bridge)
@@ -39,9 +47,10 @@ CHANNEL = 6
 MAGIC = 0xA5
 MSG_TYPE = 0x40
 
-USE_MAC = False
+USE_MAC = False            # starting mode; the page flips it with MODE MAC / MODE ID
 BROADCAST = b"\xff\xff\xff\xff\xff\xff"
-# Fill these from each node's boot printout if you set USE_MAC = True:
+# Optional pre-fill (bytes, 6 long) from each node's boot printout; normally
+# learned automatically from the nodes' reports.
 NODE_MACS = {1: None, 2: None, 3: None}
 
 wifi.radio.enabled = True
@@ -54,13 +63,29 @@ e = espnow.ESPNow()
 bcast_peer = espnow.Peer(mac=BROADCAST, channel=CHANNEL)
 e.peers.append(bcast_peer)
 
-peers_by_id = {}
-if USE_MAC:
-    for nid, mac in NODE_MACS.items():
-        if mac:
-            p = espnow.Peer(mac=mac, channel=CHANNEL)
-            e.peers.append(p)
-            peers_by_id[nid] = p
+peers_by_id = {}      # node id -> espnow.Peer, learned or pre-filled
+macs_by_id = {}       # node id -> bytes
+
+def learn(nid, mac):
+    """Remember a node's MAC (and register it as a peer) the first time we hear it."""
+    if nid < 1 or nid > 3 or mac in (None, BROADCAST):
+        return
+    if macs_by_id.get(nid) == mac:
+        return
+    old = peers_by_id.get(nid)
+    if old is not None:
+        try:
+            e.peers.remove(old)
+        except Exception:
+            pass
+    p = espnow.Peer(mac=mac, channel=CHANNEL)
+    e.peers.append(p)
+    peers_by_id[nid] = p
+    macs_by_id[nid] = mac
+
+for nid, mac in NODE_MACS.items():
+    if mac:
+        learn(nid, bytes(mac))
 
 def emit(obj):
     sys.stdout.write(json.dumps(obj, separators=(",", ":")))
@@ -74,12 +99,14 @@ def build(target_id, text):
     return body + tb
 
 def transmit(target_id, text):
-    """Send to one node (unicast if we have its MAC) or broadcast.
+    """Send to one node (unicast in MAC mode) or broadcast.
     Returns (ack, bcast): ack is True/False for a real unicast, None when the
     frame went out as a broadcast filtered by id (no radio ACK exists)."""
     payload = build(target_id, text)
     bcast = (target_id == 0)
-    unicast = (not bcast) and (target_id in peers_by_id)
+    unicast = USE_MAC and (not bcast) and (target_id in peers_by_id)
+    if USE_MAC and not bcast and not unicast:
+        emit({"t": "error", "msg": "no MAC known for node %d yet - send to ALL once so it answers" % target_id})
     before = e.send_success
     try:
         if unicast:
@@ -101,18 +128,16 @@ import supervisor
 
 buf = ""
 while True:
-    # Drain any ESP-NOW packets from nodes (optional echo-back).
-    if e:
-        p = e.read()
-        if p is not None:
-            msg = bytes(p.msg)
-            node = msg[2] if len(msg) > 2 else 0
-            text = ""
-            if len(msg) >= 6 and msg[0] == MAGIC:
-                ln = msg[5]
-                text = bytes(msg[6:6 + ln]).decode("utf-8", "replace")
-            emit({"t": "rx", "from": binascii.hexlify(bytes(p.mac)).decode(),
-                  "node": node, "text": text, "rssi": p.rssi, "ms": p.time})
+    # Drain reports from nodes: 0x41 = accepted, 0x42 = heard but not for me.
+    p = e.read()
+    if p is not None:
+        msg = bytes(p.msg)
+        if len(msg) >= 6 and msg[0] == MAGIC:
+            node, kind, to, ln = msg[2], msg[3], msg[4], msg[5]
+            text = bytes(msg[6:6 + ln]).decode("utf-8", "replace") if len(msg) > 6 else ""
+            learn(node, bytes(p.mac))
+            emit({"t": "heard" if kind == 0x42 else "rx", "from": binascii.hexlify(bytes(p.mac)).decode(),
+                  "node": node, "to": to, "text": text, "rssi": p.rssi, "ms": p.time})
 
     # Read a command line if one is available.
     n = supervisor.runtime.serial_bytes_available
@@ -124,7 +149,17 @@ while True:
                 buf = ""
                 if line:
                     parts = line.split(" ", 2)
-                    if len(parts) >= 3 and parts[0].upper() == "SEND":
+                    if len(parts) == 2 and parts[0].upper() == "MODE":
+                        want = parts[1].upper()
+                        if want == "MAC":
+                            USE_MAC = True
+                        elif want == "ID":
+                            USE_MAC = False
+                        else:
+                            emit({"t": "error", "msg": "MODE ID or MODE MAC"})
+                            continue
+                        emit({"t": "mode", "use_mac": USE_MAC, "known": sorted(peers_by_id.keys())})
+                    elif len(parts) >= 3 and parts[0].upper() == "SEND":
                         tgt = parts[1].upper()
                         text = parts[2]
                         target_id = 0 if tgt == "ALL" else (int(tgt) if tgt.isdigit() else -1)
